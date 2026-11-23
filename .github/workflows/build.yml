@@ -1,0 +1,52 @@
+
+name: Build Mushafuna APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'MushafunaAndroid_PhoneBuild.zip'
+      - '.github/workflows/build.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Extract project
+        run: unzip -q MushafunaAndroid_PhoneBuild.zip -d source
+
+      - name: Build APK
+        run: |
+          PROJECT_DIR=$(dirname "$(find source -name settings.gradle.kts -print -quit)")
+          cd "$PROJECT_DIR"
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+            ./gradlew :app:assembleDebug
+          else
+            gradle :app:assembleDebug
+          fi
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Mushafuna-debug-apk
+          path: source/**/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
